@@ -35,6 +35,14 @@ def download_images_to_zip(df, zip_filename):
 def main():
     st.title("Excel Image Downloader and Zipper")
 
+    # Add instructions for the user
+    st.markdown("""
+    **Instructions:**
+    - The uploaded Excel file must contain two columns:
+        1. **Item**: The name of the file you want for each image.
+        2. **Image**: The URL link to the image you want to download.
+    """)
+
     # Step 1: Upload Excel file
     uploaded_file = st.file_uploader("Select an Excel file", type="xlsx")
     
