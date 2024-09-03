@@ -1,17 +1,14 @@
 import streamlit as st
 import pandas as pd
 import requests
-import os
+import io
 import zipfile
-import tempfile
 
-def download_images_to_zip(df, save_dir, zip_filename):
-    # Ensure the directory exists for saving images
-    os.makedirs(save_dir, exist_ok=True)
+def download_images_to_zip(df, zip_filename):
+    # Create an in-memory ZIP file
+    zip_buffer = io.BytesIO()
 
-    # Create a ZIP file to store images
-    zip_path = os.path.join(save_dir, zip_filename)
-    with zipfile.ZipFile(zip_path, 'w') as zipf:
+    with zipfile.ZipFile(zip_buffer, 'w') as zipf:
         # Iterate through each row in the DataFrame
         for index, row in df.iterrows():
             item_number = str(row['Item'])  # Replace 'Item' with the actual header name
@@ -22,22 +19,18 @@ def download_images_to_zip(df, save_dir, zip_filename):
                 response = requests.get(image_url)
                 response.raise_for_status()
 
-                # Save the image temporarily with the item number as the file name
-                image_path = os.path.join(save_dir, f"{item_number}.jpg")
-                with open(image_path, 'wb') as file:
-                    file.write(response.content)
-
-                # Add the image to the ZIP file
-                zipf.write(image_path, arcname=f"{item_number}.jpg")
-
-                # Remove the temporary image file
-                os.remove(image_path)
+                # Save the image in the ZIP file
+                image_data = response.content
+                zipf.writestr(f"{item_number}.jpg", image_data)
 
                 st.write(f"Downloaded and added to ZIP: {item_number}.jpg")
             except requests.exceptions.RequestException as e:
                 st.error(f"Failed to download {image_url}: {e}")
 
-    st.success(f"Image download and ZIP creation process completed. ZIP file saved at: {zip_path}")
+    # Seek to the beginning of the BytesIO object
+    zip_buffer.seek(0)
+    
+    return zip_buffer
 
 def main():
     st.title("Excel Image Downloader and Zipper")
@@ -45,28 +38,29 @@ def main():
     # Step 1: Upload Excel file
     uploaded_file = st.file_uploader("Select an Excel file", type="xlsx")
     
-    # Step 2: Select a directory to save images and ZIP file
-    save_dir = st.text_input("Enter the directory to save images and ZIP file", "/Users/your_username/Documents")
-    
-    # Step 3: Enter the ZIP file name
+    # Step 2: Enter the ZIP file name
     zip_filename = st.text_input("Enter the name for the ZIP file", "images.zip")
 
     if st.button("Start Download"):
-        if uploaded_file is not None and save_dir:
-            # Check if the save directory is writable
-            if not os.access(save_dir, os.W_OK):
-                st.error(f"Cannot write to the directory: {save_dir}. Please select a writable directory.")
-            else:
-                try:
-                    # Load the Excel file
-                    df = pd.read_excel(uploaded_file)
+        if uploaded_file is not None:
+            try:
+                # Load the Excel file
+                df = pd.read_excel(uploaded_file)
 
-                    # Start the download process
-                    download_images_to_zip(df, save_dir, zip_filename)
-                except Exception as e:
-                    st.error(f"Error processing the Excel file: {e}")
+                # Start the download process
+                zip_buffer = download_images_to_zip(df, zip_filename)
+                
+                # Provide the download link
+                st.download_button(
+                    label="Download ZIP",
+                    data=zip_buffer,
+                    file_name=zip_filename,
+                    mime="application/zip"
+                )
+            except Exception as e:
+                st.error(f"Error processing the Excel file: {e}")
         else:
-            st.error("Please upload an Excel file and enter a directory path.")
+            st.error("Please upload an Excel file.")
 
 if __name__ == "__main__":
     main()
