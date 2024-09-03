@@ -3,6 +3,7 @@ import pandas as pd
 import requests
 import os
 import zipfile
+import tempfile
 
 def download_images_to_zip(df, save_dir, zip_filename):
     # Ensure the directory exists for saving images
@@ -45,24 +46,27 @@ def main():
     uploaded_file = st.file_uploader("Select an Excel file", type="xlsx")
     
     # Step 2: Select a directory to save images and ZIP file
-    save_dir = st.text_input("Enter the directory to save images and ZIP file")
-
+    save_dir = st.text_input("Enter the directory to save images and ZIP file", "/Users/your_username/Documents")
+    
     # Step 3: Enter the ZIP file name
     zip_filename = st.text_input("Enter the name for the ZIP file", "images.zip")
 
     if st.button("Start Download"):
         if uploaded_file is not None and save_dir:
-            # Load the Excel file
-            try:
-                df = pd.read_excel(uploaded_file)
+            # Check if the save directory is writable
+            if not os.access(save_dir, os.W_OK):
+                st.error(f"Cannot write to the directory: {save_dir}. Please select a writable directory.")
+            else:
+                try:
+                    # Load the Excel file
+                    df = pd.read_excel(uploaded_file)
 
-                # Start the download process
-                download_images_to_zip(df, save_dir, zip_filename)
-            except Exception as e:
-                st.error(f"Error processing the Excel file: {e}")
+                    # Start the download process
+                    download_images_to_zip(df, save_dir, zip_filename)
+                except Exception as e:
+                    st.error(f"Error processing the Excel file: {e}")
         else:
             st.error("Please upload an Excel file and enter a directory path.")
 
 if __name__ == "__main__":
     main()
-
