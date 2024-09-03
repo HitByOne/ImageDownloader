@@ -46,19 +46,23 @@ def main():
     
     # Step 2: Select a directory to save images and ZIP file
     save_dir = st.text_input("Enter the directory to save images and ZIP file")
-    
+
     # Step 3: Enter the ZIP file name
     zip_filename = st.text_input("Enter the name for the ZIP file", "images.zip")
 
     if st.button("Start Download"):
         if uploaded_file is not None and save_dir:
             # Load the Excel file
-            df = pd.read_excel(uploaded_file)
+            try:
+                df = pd.read_excel(uploaded_file)
 
-            # Start the download process
-            download_images_to_zip(df, save_dir, zip_filename)
+                # Start the download process
+                download_images_to_zip(df, save_dir, zip_filename)
+            except Exception as e:
+                st.error(f"Error processing the Excel file: {e}")
         else:
             st.error("Please upload an Excel file and enter a directory path.")
 
 if __name__ == "__main__":
     main()
+
